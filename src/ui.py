@@ -1,11 +1,17 @@
 """Rich CLI interface for the Aristotle Agent."""
 
-import sys
+import random
+import threading
+import time
 
 from rich.console import Console
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.rule import Rule
+from rich.spinner import Spinner
 from rich.table import Table
+from rich.text import Text
 from rich.theme import Theme
 
 from src.inference import AristotleAgent, RetrievedChunk
@@ -21,13 +27,48 @@ custom_theme = Theme({
 
 console = Console(theme=custom_theme)
 
+_THINKING_VERBS = [
+    "Contemplating",
+    "Reasoning",
+    "Deliberating",
+    "Reflecting",
+    "Considering",
+    "Examining",
+    "Analyzing",
+    "Pondering",
+    "Meditating",
+    "Inquiring",
+    "Discerning",
+    "Syllogizing",
+]
+
+_LOADING_PHASES = [
+    "Unrolling the scrolls",
+    "Recalling the Categories",
+    "Reviewing the Ethics",
+    "Ordering first principles",
+    "Warming up the Lyceum",
+    "Distinguishing genus from species",
+    "Preparing the dialectic",
+    "Recollecting the virtues",
+    "Tuning the lyre of reason",
+]
+
+ASCII_LOGO = r"""
+ █████╗ ██████╗ ██╗███████╗████████╗ ██████╗ ████████╗██╗     ███████╗       ██████╗██╗     ██╗
+██╔══██╗██╔══██╗██║██╔════╝╚══██╔══╝██╔═══██╗╚══██╔══╝██║     ██╔════╝      ██╔════╝██║     ██║
+███████║██████╔╝██║███████╗   ██║   ██║   ██║   ██║   ██║     █████╗  █████╗██║     ██║     ██║
+██╔══██║██╔══██╗██║╚════██║   ██║   ██║   ██║   ██║   ██║     ██╔══╝  ╚════╝██║     ██║     ██║
+██║  ██║██║  ██║██║███████║   ██║   ╚██████╔╝   ██║   ███████╗███████╗      ╚██████╗███████╗██║
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝   ╚═╝    ╚═════╝    ╚═╝   ╚══════╝╚══════╝       ╚═════╝╚══════╝╚═╝""".lstrip("\n")
+
 
 # ── Display Functions ──────────────────────────────────────────────────────
 
 def print_welcome() -> None:
     """Print styled welcome banner."""
     banner = (
-        "[aristotle]Aristotle[/aristotle]\n"
+        f"[aristotle]{ASCII_LOGO}[/aristotle]\n\n"
         "[info]An agent grounded in the Nicomachean Ethics[/info]\n\n"
         "Ask a question, or type [bold]/help[/bold] for commands."
     )
@@ -90,15 +131,39 @@ def print_help() -> None:
 def get_user_input() -> str:
     """Get user input with styled prompt."""
     try:
-        return console.input("\n[user]You:[/user] ").strip()
+        console.print()
+        console.print(Rule(style="dim"))                        # top rule
+        user_input = console.input("[user]You:[/user] ").strip()
+        console.print(Rule(style="dim"))                        # bottom rule (after Enter)
+        if user_input:
+            console.print()                                     # breathing room before response
+        return user_input
     except (EOFError, KeyboardInterrupt):
         return "exit"
 
 
 def stream_response(agent: AristotleAgent, query: str) -> None:
     """Run the query pipeline and stream the response."""
-    # Retrieve and optionally display debug info
-    response, token_gen = agent.ask(query, stream=True)
+    result: dict = {}
+
+    def _run_ask() -> None:
+        result["value"] = agent.ask(query, stream=True)
+
+    worker = threading.Thread(target=_run_ask, daemon=True)
+
+    # Shuffle verbs so each query gets a unique sequence
+    verbs = random.sample(_THINKING_VERBS, len(_THINKING_VERBS))
+    verb_idx = 0
+    spinner = Spinner("dots", text=f"[info] {verbs[0]}...[/info]", style="aristotle")
+
+    with Live(spinner, console=console, transient=True, refresh_per_second=12):
+        worker.start()
+        while worker.is_alive():
+            worker.join(timeout=0.8)
+            verb_idx = (verb_idx + 1) % len(verbs)
+            spinner.update(text=f"[info] {verbs[verb_idx]}...[/info]")
+
+    response, token_gen = result["value"]
 
     if response.debug:
         console.print()
@@ -108,7 +173,7 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
         console.print()
 
     # Stream response
-    console.print("\n[aristotle]Aristotle:[/aristotle]")
+    console.print("[aristotle]Aristotle:[/aristotle]")
     for token in token_gen:
         print(token, end="", flush=True)
     print()  # newline after streaming
@@ -119,6 +184,22 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
 def run_cli(agent: AristotleAgent) -> None:
     """Main interactive loop."""
     print_welcome()
+
+    # Eagerly load embeddings + ChromaDB so first query is fast
+    def _load() -> None:
+        agent._ensure_retriever()
+
+    worker = threading.Thread(target=_load, daemon=True)
+    phases = random.sample(_LOADING_PHASES, len(_LOADING_PHASES))
+    phase_idx = 0
+    spinner = Spinner("dots", text=f"[info] {phases[0]}...[/info]", style="aristotle")
+
+    with Live(spinner, console=console, transient=True, refresh_per_second=12):
+        worker.start()
+        while worker.is_alive():
+            worker.join(timeout=2.5)
+            phase_idx = (phase_idx + 1) % len(phases)
+            spinner.update(text=f"[info] {phases[phase_idx]}...[/info]")
 
     while True:
         query = get_user_input()

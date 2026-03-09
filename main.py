@@ -39,16 +39,10 @@ def main() -> None:
         console.print("[bold red]Missing dependency:[/bold red] chromadb. Install with: pip install chromadb")
         sys.exit(1)
 
-    # Load agent with spinner
     from src.inference import AristotleAgent
     from src.ui import run_cli
 
-    try:
-        with console.status("[bold gold1]Loading Aristotle's mind...[/bold gold1]", spinner="dots"):
-            agent = AristotleAgent(debug=args.debug)
-    except RuntimeError as e:
-        console.print(f"[bold red]Setup error:[/bold red] {e}")
-        sys.exit(1)
+    agent = AristotleAgent(debug=args.debug)
 
     # Run interactive loop
     try:

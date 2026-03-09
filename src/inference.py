@@ -13,10 +13,12 @@ from config import (
     COLLECTION_NAME,
     EMBEDDING_MODEL,
     MAX_TOKENS,
+    MIN_RELEVANCE_SCORE,
     SYSTEM_PROMPT_PATH,
     TEMPERATURE,
     TOP_K,
 )
+from src.guardrails import check_jailbreak
 
 
 # ── Data Classes ───────────────────────────────────────────────────────────
@@ -55,16 +57,17 @@ class AristotleAgent:
         self.debug = debug
         self.model = ANTHROPIC_MODEL
         self.client = anthropic.Anthropic()
+        self._retriever_ready = False
 
         # Load system prompt
         with open(SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             self.system_prompt = f.read().strip()
 
-        # Init ChromaDB
-        self._init_retriever()
+    def _ensure_retriever(self) -> None:
+        """Lazy-init ChromaDB client and collection on first query."""
+        if self._retriever_ready:
+            return
 
-    def _init_retriever(self) -> None:
-        """Initialize ChromaDB client and collection."""
         try:
             import torch
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -75,7 +78,6 @@ class AristotleAgent:
             model_name=EMBEDDING_MODEL,
             device=device,
         )
-
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         try:
             self.collection = client.get_collection(
@@ -87,9 +89,11 @@ class AristotleAgent:
                 f"Collection '{COLLECTION_NAME}' not found.\n"
                 f"Run ingestion first: python -m src.ingest --reset"
             )
+        self._retriever_ready = True
 
     def retrieve(self, query: str, n_results: int = TOP_K) -> list[RetrievedChunk]:
         """Query ChromaDB and return retrieved chunks with similarity scores."""
+        self._ensure_retriever()
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results,
@@ -165,17 +169,37 @@ class AristotleAgent:
                 yield text
 
     def ask(self, query: str, stream: bool = True) -> AgentResponse:
-        """Full pipeline: retrieve → assemble → generate.
+        """Full pipeline: guardrail → retrieve → assemble → generate.
 
         If stream=True, the text field will be empty and you must consume
         the generator returned by generate() separately.
         """
+        # Layer 3: keyword pre-filter (no API call)
+        refusal = check_jailbreak(query)
+        if refusal is not None:
+            if stream:
+                return AgentResponse(text=""), self._yield_text(refusal)
+            return AgentResponse(text=refusal)
+
+        # Layer 2: retrieval score gating
         chunks = self.retrieve(query)
-        messages = self.assemble_prompt(query, chunks)
+        best_score = max(c.score for c in chunks) if chunks else 0.0
+
+        if best_score < MIN_RELEVANCE_SCORE:
+            # Off-topic — send deflection to LLM without RAG context
+            deflection = (
+                "The student has asked about something entirely outside your "
+                "knowledge. You have never heard of such a thing. Tell them plainly "
+                "that this matter is unknown to you, and invite them to ask about "
+                "virtue, justice, the good life, or the other subjects you know.\n\n"
+                f"Student's question: {query}"
+            )
+            messages = [{"role": "user", "content": deflection}]
+        else:
+            messages = self.assemble_prompt(query, chunks)
 
         debug_info = None
         if self.debug:
-            # For debug display, include system prompt in the prompt view
             debug_messages = [
                 {"role": "system", "content": self.system_prompt},
                 *messages,
@@ -188,3 +212,8 @@ class AristotleAgent:
         else:
             text = self.generate(messages, stream=False)
             return AgentResponse(text=text, debug=debug_info)
+
+    @staticmethod
+    def _yield_text(text: str) -> Generator[str, None, None]:
+        """Yield a complete string as a single token for streaming compatibility."""
+        yield text
