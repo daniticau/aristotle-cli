@@ -213,7 +213,7 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
     print("\033[?25l", end="", flush=True)  # hide terminal cursor
     CHAR_DELAY = 0.014  # ~70 chars/sec — brisk but not frantic
     GLITCH_CHARS = "αβγδεζηθικλμνξπρστφχψω"
-    GLITCH_LEN = 10
+    GLITCH_LEN = 5
     terminal_width = shutil.get_terminal_size().columns
     col = 0
     word_buf: list[str] = []
@@ -226,21 +226,19 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
             glitch_buf.clear()
             return
         if glitch_buf:
-            # Real char overwrote the first glitch char; rotate it out, add one new at end
             glitch_buf.pop(0)
             glitch_buf.append(random.choice(GLITCH_CHARS))
-        # Fill up to n if buffer is short (first call or after clear)
         while len(glitch_buf) < n:
             glitch_buf.append(random.choice(GLITCH_CHARS))
-        trail = "".join(glitch_buf[:n])
-        print(trail, end="", flush=True)
-        print("\b" * n, end="", flush=True)
+        del glitch_buf[n:]  # keep buffer in sync with display
+        trail = "".join(glitch_buf)
+        print(f"\033[s{trail}\033[u", end="", flush=True)
 
     def _clear_glitch() -> None:
         n = len(glitch_buf)
         if n <= 0:
             return
-        print(" " * n + "\b" * n, end="", flush=True)
+        print(f"\033[s{' ' * n}\033[u", end="", flush=True)
         glitch_buf.clear()
 
     def _flush_word() -> None:
@@ -265,6 +263,8 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
             col += 1
             _show_glitch()
 
+    pending_newlines = 0
+
     while not stream_done.is_set() or not char_queue.empty():
         try:
             ch = char_queue.get(timeout=0.05)
@@ -273,11 +273,21 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
         if ch == "\n":
             _flush_word()
             _clear_glitch()
-            print()
-            col = 0
+            pending_newlines += 1
         elif ch == " ":
+            if pending_newlines:
+                # Emit at most one blank line (2 newlines max)
+                for _ in range(min(pending_newlines, 1)):
+                    print()
+                col = 0
+                pending_newlines = 0
             _flush_word()
         else:
+            if pending_newlines:
+                for _ in range(min(pending_newlines, 1)):
+                    print()
+                col = 0
+                pending_newlines = 0
             word_buf.append(ch)
 
     _flush_word()

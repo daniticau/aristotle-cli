@@ -20,7 +20,7 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # ── Anthropic LLM ─────────────────────────────────────────────────────────
 ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 1024
+MAX_TOKENS = 300
 TEMPERATURE = 0.3
 
 # ── RAG Parameters ────────────────────────────────────────────────────────

@@ -119,8 +119,10 @@ class AristotleAgent:
 
         return chunks
 
+    PREFILL = "In brief:"
+
     def assemble_prompt(self, query: str, chunks: list[RetrievedChunk]) -> list[dict]:
-        """Build the user message with RAG context. System prompt sent separately."""
+        """Build the message list with RAG context + assistant prefill."""
         passages = []
         for i, chunk in enumerate(chunks, 1):
             source = f"Book {chunk.book}, Chapter {chunk.chapter}"
@@ -135,7 +137,10 @@ class AristotleAgent:
             f"Question: {query}"
         )
 
-        messages = [{"role": "user", "content": user_message}]
+        messages = [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": self.PREFILL},
+        ]
         return messages
 
     def generate(self, messages: list[dict], stream: bool = True):
@@ -158,6 +163,7 @@ class AristotleAgent:
 
     def _generate_stream(self, messages: list[dict]) -> Generator[str, None, None]:
         """Stream tokens from the Anthropic API."""
+        first = True
         with self.client.messages.stream(
             model=self.model,
             max_tokens=MAX_TOKENS,
@@ -166,6 +172,11 @@ class AristotleAgent:
             messages=messages,
         ) as stream:
             for text in stream.text_stream:
+                if first:
+                    text = text.lstrip()
+                    first = False
+                    if not text:
+                        continue
                 yield text
 
     def ask(self, query: str, stream: bool = True) -> AgentResponse:
