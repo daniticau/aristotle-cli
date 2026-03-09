@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+venv/
+
+# Data (downloaded/generated)
+data/raw/
+data/chroma_db/
+
+# Models (large GGUF files)
+models/
+*.gguf
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# Windows artifacts
+nul
