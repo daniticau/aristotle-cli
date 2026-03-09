@@ -1,6 +1,8 @@
 """Rich CLI interface for the Aristotle Agent."""
 
+import queue
 import random
+import shutil
 import threading
 import time
 
@@ -8,7 +10,6 @@ from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.rule import Rule
 from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
@@ -72,7 +73,7 @@ def print_welcome() -> None:
         "[info]An agent grounded in the Nicomachean Ethics[/info]\n\n"
         "Ask a question, or type [bold]/help[/bold] for commands."
     )
-    console.print(Panel(banner, border_style="gold1", padding=(1, 2)))
+    console.print(Panel(banner, border_style="gold1", padding=(1, 2), expand=False))
 
 
 def print_debug_retrieval(chunks: list[RetrievedChunk]) -> None:
@@ -132,11 +133,8 @@ def get_user_input() -> str:
     """Get user input with styled prompt."""
     try:
         console.print()
-        console.print(Rule(style="dim"))                        # top rule
         user_input = console.input("[user]You:[/user] ").strip()
-        console.print(Rule(style="dim"))                        # bottom rule (after Enter)
-        if user_input:
-            console.print()                                     # breathing room before response
+        console.print()
         return user_input
     except (EOFError, KeyboardInterrupt):
         return "exit"
@@ -172,10 +170,119 @@ def stream_response(agent: AristotleAgent, query: str) -> None:
         print_debug_prompt(response.debug.prompt)
         console.print()
 
-    # Stream response
+    # Print label then show thinking spinner until first token arrives
     console.print("[aristotle]Aristotle:[/aristotle]")
-    for token in token_gen:
-        print(token, end="", flush=True)
+    verbs2 = random.sample(_THINKING_VERBS, len(_THINKING_VERBS))
+    verb_idx2 = 0
+    spinner2 = Spinner("dots", text=f"[info] {verbs2[0]}...[/info]", style="aristotle")
+    first_tokens: list[str] = []
+    token_iter = iter(token_gen)
+    got_first = threading.Event()
+
+    def _wait_first_token() -> None:
+        try:
+            first_tokens.append(next(token_iter))
+        except StopIteration:
+            pass
+        got_first.set()
+
+    tok_worker = threading.Thread(target=_wait_first_token, daemon=True)
+    tok_worker.start()
+
+    with Live(spinner2, console=console, transient=True, refresh_per_second=12):
+        while not got_first.is_set():
+            got_first.wait(timeout=0.8)
+            verb_idx2 = (verb_idx2 + 1) % len(verbs2)
+            spinner2.update(text=f"[info] {verbs2[verb_idx2]}...[/info]")
+    # Smooth typewriter: buffer tokens in background, drain at constant pace
+    char_queue: queue.Queue[str] = queue.Queue()
+    stream_done = threading.Event()
+
+    def _fill_buffer() -> None:
+        for t in first_tokens:
+            for ch in t:
+                char_queue.put(ch)
+        for token in token_iter:
+            for ch in token:
+                char_queue.put(ch)
+        stream_done.set()
+
+    filler = threading.Thread(target=_fill_buffer, daemon=True)
+    filler.start()
+
+    print("\033[?25l", end="", flush=True)  # hide terminal cursor
+    CHAR_DELAY = 0.014  # ~70 chars/sec — brisk but not frantic
+    GLITCH_CHARS = "αβγδεζηθικλμνξπρστφχψω"
+    GLITCH_LEN = 10
+    terminal_width = shutil.get_terminal_size().columns
+    col = 0
+    word_buf: list[str] = []
+    glitch_buf: list[str] = []
+
+    def _show_glitch() -> None:
+        avail = terminal_width - col
+        n = min(GLITCH_LEN, avail)
+        if n <= 0:
+            glitch_buf.clear()
+            return
+        if glitch_buf:
+            # Real char overwrote the first glitch char; rotate it out, add one new at end
+            glitch_buf.pop(0)
+            glitch_buf.append(random.choice(GLITCH_CHARS))
+        # Fill up to n if buffer is short (first call or after clear)
+        while len(glitch_buf) < n:
+            glitch_buf.append(random.choice(GLITCH_CHARS))
+        trail = "".join(glitch_buf[:n])
+        print(trail, end="", flush=True)
+        print("\b" * n, end="", flush=True)
+
+    def _clear_glitch() -> None:
+        n = len(glitch_buf)
+        if n <= 0:
+            return
+        print(" " * n + "\b" * n, end="", flush=True)
+        glitch_buf.clear()
+
+    def _flush_word() -> None:
+        nonlocal col
+        word = "".join(word_buf)
+        word_buf.clear()
+        if not word:
+            return
+        needed = (1 if col > 0 else 0) + len(word)
+        if col + needed > terminal_width and col > 0:
+            _clear_glitch()
+            print()
+            col = 0
+        if col > 0:
+            print(" ", end="", flush=True)
+            time.sleep(CHAR_DELAY)
+            col += 1
+            _show_glitch()
+        for c in word:
+            print(c, end="", flush=True)
+            time.sleep(CHAR_DELAY)
+            col += 1
+            _show_glitch()
+
+    while not stream_done.is_set() or not char_queue.empty():
+        try:
+            ch = char_queue.get(timeout=0.05)
+        except queue.Empty:
+            continue
+        if ch == "\n":
+            _flush_word()
+            _clear_glitch()
+            print()
+            col = 0
+        elif ch == " ":
+            _flush_word()
+        else:
+            word_buf.append(ch)
+
+    _flush_word()
+    _clear_glitch()
+    print("\033[?25h", end="", flush=True)  # restore terminal cursor
     print()  # newline after streaming
 
 
