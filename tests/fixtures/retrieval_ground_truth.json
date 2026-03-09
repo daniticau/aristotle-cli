@@ -1,0 +1,282 @@
+[
+  {
+    "query": "What is virtue?",
+    "top_5": [
+      {
+        "id": "nic_eth_b02_c05_001",
+        "score": 0.731071,
+        "book": 2,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b02_c06_000",
+        "score": 0.727468,
+        "book": 2,
+        "chapter": 6
+      },
+      {
+        "id": "nic_eth_b02_c05_000",
+        "score": 0.591355,
+        "book": 2,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b02_c04_000",
+        "score": 0.561591,
+        "book": 2,
+        "chapter": 4
+      },
+      {
+        "id": "nic_eth_b04_c04_001",
+        "score": 0.556937,
+        "book": 4,
+        "chapter": 4
+      }
+    ]
+  },
+  {
+    "query": "What is courage?",
+    "top_5": [
+      {
+        "id": "nic_eth_b03_c11_000",
+        "score": 0.648475,
+        "book": 3,
+        "chapter": 11
+      },
+      {
+        "id": "nic_eth_b03_c12_000",
+        "score": 0.562602,
+        "book": 3,
+        "chapter": 12
+      },
+      {
+        "id": "nic_eth_b03_c11_001",
+        "score": 0.537607,
+        "book": 3,
+        "chapter": 11
+      },
+      {
+        "id": "nic_eth_b03_c09_000",
+        "score": 0.515814,
+        "book": 3,
+        "chapter": 9
+      },
+      {
+        "id": "nic_eth_b03_c10_000",
+        "score": 0.510552,
+        "book": 3,
+        "chapter": 10
+      }
+    ]
+  },
+  {
+    "query": "What is the highest good?",
+    "top_5": [
+      {
+        "id": "nic_eth_b10_c06_000",
+        "score": 0.401485,
+        "book": 10,
+        "chapter": 6
+      },
+      {
+        "id": "nic_eth_b02_c05_000",
+        "score": 0.334789,
+        "book": 2,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b01_c10_000",
+        "score": 0.330584,
+        "book": 1,
+        "chapter": 10
+      },
+      {
+        "id": "nic_eth_b02_c05_001",
+        "score": 0.322618,
+        "book": 2,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b10_c06_001",
+        "score": 0.309302,
+        "book": 10,
+        "chapter": 6
+      }
+    ]
+  },
+  {
+    "query": "What is happiness?",
+    "top_5": [
+      {
+        "id": "nic_eth_b01_c06_000",
+        "score": 0.709857,
+        "book": 1,
+        "chapter": 6
+      },
+      {
+        "id": "nic_eth_b10_c05_000",
+        "score": 0.612462,
+        "book": 10,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b10_c07_000",
+        "score": 0.551714,
+        "book": 10,
+        "chapter": 7
+      },
+      {
+        "id": "nic_eth_b10_c06_000",
+        "score": 0.537025,
+        "book": 10,
+        "chapter": 6
+      },
+      {
+        "id": "nic_eth_b10_c06_001",
+        "score": 0.527315,
+        "book": 10,
+        "chapter": 6
+      }
+    ]
+  },
+  {
+    "query": "What is the mean?",
+    "top_5": [
+      {
+        "id": "nic_eth_b04_c09_000",
+        "score": 0.38045,
+        "book": 4,
+        "chapter": 9
+      },
+      {
+        "id": "nic_eth_b02_c08_000",
+        "score": 0.35075,
+        "book": 2,
+        "chapter": 8
+      },
+      {
+        "id": "nic_eth_b02_c09_000",
+        "score": 0.349394,
+        "book": 2,
+        "chapter": 9
+      },
+      {
+        "id": "nic_eth_b05_c07_001",
+        "score": 0.334052,
+        "book": 5,
+        "chapter": 7
+      },
+      {
+        "id": "nic_eth_b04_c03_000",
+        "score": 0.329621,
+        "book": 4,
+        "chapter": 3
+      }
+    ]
+  },
+  {
+    "query": "What is justice?",
+    "top_5": [
+      {
+        "id": "nic_eth_b05_c02_000",
+        "score": 0.503384,
+        "book": 5,
+        "chapter": 2
+      },
+      {
+        "id": "nic_eth_b05_c09_000",
+        "score": 0.487662,
+        "book": 5,
+        "chapter": 9
+      },
+      {
+        "id": "nic_eth_b05_c04_000",
+        "score": 0.48439,
+        "book": 5,
+        "chapter": 4
+      },
+      {
+        "id": "nic_eth_b05_c03_000",
+        "score": 0.46616,
+        "book": 5,
+        "chapter": 3
+      },
+      {
+        "id": "nic_eth_b05_c01_000",
+        "score": 0.441453,
+        "book": 5,
+        "chapter": 1
+      }
+    ]
+  },
+  {
+    "query": "What is friendship?",
+    "top_5": [
+      {
+        "id": "nic_eth_b08_c08_000",
+        "score": 0.647347,
+        "book": 8,
+        "chapter": 8
+      },
+      {
+        "id": "nic_eth_b08_c01_000",
+        "score": 0.60855,
+        "book": 8,
+        "chapter": 1
+      },
+      {
+        "id": "nic_eth_b08_c06_000",
+        "score": 0.571109,
+        "book": 8,
+        "chapter": 6
+      },
+      {
+        "id": "nic_eth_b09_c01_000",
+        "score": 0.563706,
+        "book": 9,
+        "chapter": 1
+      },
+      {
+        "id": "nic_eth_b08_c05_000",
+        "score": 0.551464,
+        "book": 8,
+        "chapter": 5
+      }
+    ]
+  },
+  {
+    "query": "What is practical wisdom?",
+    "top_5": [
+      {
+        "id": "nic_eth_b06_c08_000",
+        "score": 0.708659,
+        "book": 6,
+        "chapter": 8
+      },
+      {
+        "id": "nic_eth_b06_c05_000",
+        "score": 0.692031,
+        "book": 6,
+        "chapter": 5
+      },
+      {
+        "id": "nic_eth_b06_c12_000",
+        "score": 0.624306,
+        "book": 6,
+        "chapter": 12
+      },
+      {
+        "id": "nic_eth_b06_c12_002",
+        "score": 0.535539,
+        "book": 6,
+        "chapter": 12
+      },
+      {
+        "id": "nic_eth_b06_c10_000",
+        "score": 0.479456,
+        "book": 6,
+        "chapter": 10
+      }
+    ]
+  }
+]
