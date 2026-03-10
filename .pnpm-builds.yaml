@@ -1,0 +1,8 @@
+esbuild:
+  - 0.25.6
+onnxruntime-node:
+  - 1.21.0
+protobufjs:
+  - 7.5.3
+sharp:
+  - 0.34.3

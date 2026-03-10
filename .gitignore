@@ -1,27 +1,28 @@
-# Python
+# Python (legacy)
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
-dist/
-build/
-
-# Environment
-.env
 venv/
 
-# Data (downloaded/generated)
+# Node / TypeScript
+node_modules/
+*.tgz
+
+# Data (generated/downloaded)
 data/raw/
 data/chroma_db/
-
-# Models (large GGUF files)
 models/
 *.gguf
 
-# IDE
+# Build output
+dist/
+build/
+
+# Secrets & IDE
+.env
 .vscode/
 .idea/
 .claude/
-
-# Windows artifacts
+.DS_Store
 nul
