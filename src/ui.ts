@@ -43,6 +43,10 @@ const LOADING_PHASES = [
   "Preparing the dialectic",
   "Recollecting the virtues",
   "Tuning the lyre of reason",
+  "Consulting the Metaphysics",
+  "Reviewing the Politics",
+  "Studying the Rhetoric",
+  "Contemplating the Physics",
 ];
 
 const ASCII_LOGO = `
@@ -88,7 +92,7 @@ function printWelcome(): void {
   const contentLines = [
     ...ASCII_LOGO.split("\n").filter(Boolean),
     "",
-    dim("  An agent grounded in the Nicomachean Ethics"),
+    dim("  An agent grounded in the complete works of Aristotle"),
     "",
     `  Ask a question, or type ${chalk.bold("/help")} for commands.`,
   ];
@@ -130,7 +134,7 @@ function printDebugRetrieval(chunks: RetrievedChunk[]): void {
 
   for (let i = 0; i < chunks.length; i++) {
     const c = chunks[i];
-    const source = `Book ${c.book}, Ch. ${c.chapter}`;
+    const source = `${c.work}\nBk ${c.book}, Pt ${c.chapter}`;
     const tags = c.tags.join(", ");
     const preview = c.text.slice(0, 120).replace(/\n/g, " ") + "...";
     table.push([

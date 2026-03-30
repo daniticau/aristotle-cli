@@ -1,6 +1,6 @@
 /**
  * Retriever — load pre-computed embeddings, embed queries at runtime,
- * brute-force cosine similarity over 187 chunks.
+ * brute-force cosine similarity over the full Aristotle corpus.
  */
 
 import { readFileSync } from "node:fs";
@@ -11,6 +11,7 @@ import { CHUNKS_PATH, EMBEDDING_MODEL, TOP_K } from "./config.js";
 export interface Chunk {
   id: string;
   text: string;
+  work: string;
   book: number;
   chapter: number;
   tags: string[];
@@ -20,6 +21,7 @@ export interface Chunk {
 export interface RetrievedChunk {
   id: string;
   text: string;
+  work: string;
   book: number;
   chapter: number;
   score: number;
@@ -123,6 +125,7 @@ export async function retrieve(
     return {
       id: chunk.id,
       text: chunk.text,
+      work: chunk.work,
       book: chunk.book,
       chapter: chunk.chapter,
       score,

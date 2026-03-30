@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-A RAG-powered CLI agent that embodies Aristotle, grounded in the Nicomachean Ethics. TypeScript/Node.js.
+A RAG-powered CLI agent that embodies Aristotle, grounded in his complete works. TypeScript/Node.js.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Three-layer persona defense (no ChromaDB — pure JS):
 ```
 User query
   → guardrails.ts     regex jailbreak filter
-  → retriever.ts      brute-force cosine similarity over pre-computed embeddings (187 chunks × 384 dims)
+  → retriever.ts      brute-force cosine similarity over pre-computed embeddings (1777 chunks × 384 dims)
   → agent.ts          AristotleAgent: ask → retrieve → assemble → Claude streaming
   → ui.ts             chalk/ora CLI with spinners, streaming output
 ```
@@ -28,8 +28,13 @@ Embeddings are pre-computed and shipped as JSON. Query embedding uses `@huggingf
 
 ## Data Files
 
-- `data/chunks_with_embeddings.json` — 187 chunks with text, metadata, 384-dim vectors (1.2MB)
+- `data/chunks_with_embeddings.json` — 1777 chunks from 18 works with text, metadata, 384-dim vectors (~11.5MB)
 - `data/system.txt` — Aristotle persona system prompt
+- `scripts/build_corpus.py` — standalone Python script to rebuild the corpus (`uv run scripts/build_corpus.py`)
+
+## Corpus
+
+18 works: Nicomachean Ethics, Politics, Rhetoric, Poetics, Metaphysics, Physics, On the Soul, Categories, On Interpretation, Prior Analytics, Posterior Analytics, Topics, On Sophistical Refutations, On the Heavens, On Generation and Corruption, Meteorology, Athenian Constitution, On Memory and Reminiscence.
 
 ## Legacy Python Version
 

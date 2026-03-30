@@ -54,13 +54,13 @@ export class AristotleAgent {
     chunks: RetrievedChunk[],
   ): Array<{ role: "user" | "assistant"; content: string }> {
     const passages = chunks.map((chunk, i) => {
-      const source = `Book ${chunk.book}, Chapter ${chunk.chapter}`;
+      const source = `${chunk.work}, Book ${chunk.book}, Part ${chunk.chapter}`;
       return `[Passage ${i + 1} — ${source}]\n${chunk.text}`;
     });
 
     const contextBlock = passages.join("\n\n");
     const userMessage =
-      `The following passages from your Nicomachean Ethics are provided for reference:\n\n` +
+      `The following passages from your own writings are provided for reference:\n\n` +
       `${contextBlock}\n\n` +
       `---\n\n` +
       `Question: ${query}`;

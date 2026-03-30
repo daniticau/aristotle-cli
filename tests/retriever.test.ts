@@ -52,10 +52,11 @@ describe("retriever", () => {
     const chunks = JSON.parse(
       readFileSync(join(__dirname, "..", "data", "chunks_with_embeddings.json"), "utf-8"),
     );
-    expect(chunks.length).toBe(187);
+    expect(chunks.length).toBeGreaterThan(1000);
     const first = chunks[0];
     expect(first.id).toBeTruthy();
     expect(first.text).toBeTruthy();
+    expect(first.work).toBeTruthy();
     expect(first.embedding).toHaveLength(384);
     expect(typeof first.book).toBe("number");
     expect(typeof first.chapter).toBe("number");
