@@ -60,7 +60,10 @@ ${goldBold("╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════�
 
 const GLITCH_CHARS = "αβγδεζηθικλμνξπρστφχψω";
 const GLITCH_LEN = 5;
-const CHAR_DELAY = 8; // ms — ~125 chars/sec
+const CHAR_DELAY = 2;
+const SPACE_DELAY = 1;
+const MAX_RESPONSE_WIDTH = 92;
+const MIN_RESPONSE_WIDTH = 20;
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -89,6 +92,10 @@ function stripAnsi(str: string): string {
 // ── Display Functions ────────────────────────────────────────────────────
 
 function printWelcome(): void {
+  if (!stdout.isTTY) {
+    return;
+  }
+
   const contentLines = [
     ...ASCII_LOGO.split("\n").filter(Boolean),
     "",
@@ -179,7 +186,11 @@ function printHelp(): void {
 function cyclingSpinner(
   phrases: string[],
   intervalMs: number,
-): { spinner: ReturnType<typeof ora>; stop: () => void } {
+): { stop: () => void } {
+  if (!stdout.isTTY) {
+    return { stop: () => {} };
+  }
+
   const shuffled = shuffle(phrases);
   let idx = 0;
   const spinner = ora({
@@ -193,7 +204,6 @@ function cyclingSpinner(
   }, intervalMs);
 
   return {
-    spinner,
     stop: () => {
       clearInterval(timer);
       spinner.stop();
@@ -205,12 +215,14 @@ function cyclingSpinner(
 
 class GlitchTypewriter {
   private col = 0;
-  private terminalWidth: number;
   private wordBuf: string[] = [];
   private glitchBuf: string[] = [];
 
-  constructor() {
-    this.terminalWidth = stdout.columns || 80;
+  private get terminalWidth(): number {
+    return Math.max(
+      Math.min(stdout.columns || 80, MAX_RESPONSE_WIDTH),
+      MIN_RESPONSE_WIDTH,
+    );
   }
 
   private showGlitch(): void {
@@ -252,7 +264,7 @@ class GlitchTypewriter {
     }
     if (this.col > 0) {
       stdout.write(" ");
-      await sleep(CHAR_DELAY);
+      await sleep(SPACE_DELAY);
       this.col++;
       this.showGlitch();
     }
@@ -265,44 +277,55 @@ class GlitchTypewriter {
   }
 
   async write(tokenGen: AsyncGenerator<string>): Promise<void> {
+    if (!stdout.isTTY) {
+      for await (const token of tokenGen) {
+        stdout.write(token);
+      }
+      stdout.write("\n");
+      return;
+    }
+
     // Hide cursor during typewriter
     stdout.write("\x1b[?25l");
 
-    let pendingNewlines = 0;
+    try {
+      let pendingNewlines = 0;
 
-    for await (const token of tokenGen) {
-      for (const ch of token) {
-        if (ch === "\n") {
-          await this.flushWord();
-          this.clearGlitch();
-          pendingNewlines++;
-        } else if (ch === " ") {
-          if (pendingNewlines > 0) {
-            for (let i = 0; i < Math.min(pendingNewlines, 1); i++) {
-              stdout.write("\n");
+      for await (const token of tokenGen) {
+        for (const ch of token) {
+          if (ch === "\n") {
+            await this.flushWord();
+            this.clearGlitch();
+            pendingNewlines++;
+          } else if (ch === " ") {
+            if (pendingNewlines > 0) {
+              for (let i = 0; i < Math.min(pendingNewlines, 2); i++) {
+                stdout.write("\n");
+              }
+              this.col = 0;
+              pendingNewlines = 0;
             }
-            this.col = 0;
-            pendingNewlines = 0;
-          }
-          await this.flushWord();
-        } else {
-          if (pendingNewlines > 0) {
-            for (let i = 0; i < Math.min(pendingNewlines, 1); i++) {
-              stdout.write("\n");
+            await this.flushWord();
+          } else {
+            if (pendingNewlines > 0) {
+              for (let i = 0; i < Math.min(pendingNewlines, 2); i++) {
+                stdout.write("\n");
+              }
+              this.col = 0;
+              pendingNewlines = 0;
             }
-            this.col = 0;
-            pendingNewlines = 0;
+            this.wordBuf.push(ch);
           }
-          this.wordBuf.push(ch);
         }
       }
-    }
 
-    await this.flushWord();
-    this.clearGlitch();
-    // Restore cursor and add scroll padding
-    stdout.write("\x1b[?25h");
-    stdout.write("\n");
+      await this.flushWord();
+      this.clearGlitch();
+    } finally {
+      // Restore cursor and add scroll padding even if streaming fails midway.
+      stdout.write("\x1b[?25h");
+      stdout.write("\n");
+    }
   }
 }
 
@@ -322,11 +345,9 @@ async function streamResponse(
     thinking.stop();
   }
 
-  const [agentResponse, tokenGen] = response;
-
-  if (agentResponse.debug) {
-    printDebugRetrieval(agentResponse.debug.chunks);
-    printDebugPrompt(agentResponse.debug.prompt);
+  if (response.debug) {
+    printDebugRetrieval(response.debug.chunks);
+    printDebugPrompt(response.debug.prompt);
   }
 
   // Print label
@@ -334,14 +355,21 @@ async function streamResponse(
 
   // Wait for first token with spinner, then stop spinner before typewriter starts
   const firstTokenSpinner = cyclingSpinner(THINKING_VERBS, 800);
-  const firstResult = await tokenGen.next();
-  firstTokenSpinner.stop();
+  let firstResult: IteratorResult<string>;
+  try {
+    firstResult = await response.stream.next();
+  } finally {
+    firstTokenSpinner.stop();
+  }
 
-  if (firstResult.done) return;
+  if (firstResult.done) {
+    stdout.write(dim("(No response.)") + "\n");
+    return;
+  }
 
   async function* prependFirst(): AsyncGenerator<string> {
     yield firstResult.value;
-    yield* tokenGen;
+    yield* response.stream;
   }
 
   const typewriter = new GlitchTypewriter();
@@ -361,45 +389,52 @@ export async function runCli(agent: AristotleAgent): Promise<void> {
     loading.stop();
   }
 
-  while (true) {
-    console.log();
+  const rl = createInterface({
+    input: stdin,
+    output: stdout,
+    terminal: stdout.isTTY,
+  });
 
-    const rl = createInterface({ input: stdin, output: stdout });
-    let query: string;
-    try {
-      query = (await rl.question(green("You: "))).trim();
-    } catch {
-      rl.close();
-      break;
+  try {
+    while (true) {
+      console.log();
+
+      let query: string;
+      try {
+        query = (await rl.question(green("You: "))).trim();
+      } catch {
+        break;
+      }
+
+      console.log();
+
+      if (!query) continue;
+
+      const lower = query.toLowerCase();
+      if (lower === "exit" || lower === "quit") {
+        console.log(dim("Farewell."));
+        break;
+      }
+
+      if (lower === "/help") {
+        printHelp();
+        continue;
+      }
+
+      if (lower === "/debug") {
+        agent.debug = !agent.debug;
+        const state = agent.debug ? "ON" : "OFF";
+        console.log(magenta(`Debug mode: ${state}`));
+        continue;
+      }
+
+      try {
+        await streamResponse(agent, query);
+      } catch (err) {
+        console.error(chalk.red(`Error: ${err instanceof Error ? err.message : err}`));
+      }
     }
+  } finally {
     rl.close();
-
-    console.log();
-
-    if (!query) continue;
-
-    const lower = query.toLowerCase();
-    if (lower === "exit" || lower === "quit") {
-      console.log(dim("Farewell."));
-      break;
-    }
-
-    if (lower === "/help") {
-      printHelp();
-      continue;
-    }
-
-    if (lower === "/debug") {
-      agent.debug = !agent.debug;
-      const state = agent.debug ? "ON" : "OFF";
-      console.log(magenta(`Debug mode: ${state}`));
-      continue;
-    }
-
-    try {
-      await streamResponse(agent, query);
-    } catch (err) {
-      console.error(chalk.red(`Error: ${err instanceof Error ? err.message : err}`));
-    }
   }
 }
