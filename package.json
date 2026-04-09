@@ -1,7 +1,7 @@
 {
   "name": "aristotle-cli",
   "version": "1.0.0",
-  "description": "A RAG-powered CLI agent that embodies Aristotle, grounded in the Nicomachean Ethics",
+  "description": "A RAG-powered CLI agent that embodies Aristotle, grounded in 18 of his complete works",
   "type": "module",
   "bin": {
     "aristotle": "./dist/index.js"
@@ -15,6 +15,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "start": "node dist/index.js"
   },
   "keywords": [
@@ -22,7 +23,8 @@
     "philosophy",
     "cli",
     "rag",
-    "nicomachean-ethics"
+    "nicomachean-ethics",
+    "ancient-philosophy"
   ],
   "author": "danit",
   "license": "MIT",
